@@ -2,13 +2,16 @@ package com.example.boris.wallpaperslideshow;
 
 import android.Manifest;
 import android.app.WallpaperManager;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.service.wallpaper.WallpaperService;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -16,6 +19,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -41,8 +45,19 @@ public class MainActivity extends AppCompatActivity {
         setDefaults();
         requirePermissions();
 
-    }
+        ImageView imageView = findViewById(R.id.imageView);
+      /*  BitmapFactory.Options mBitmapOptions = new BitmapFactory.Options();
+        mBitmapOptions.inJustDecodeBounds = true;
+        BitmapFactory.decodeResource(getResources(), R.drawable.pic11, mBitmapOptions);
+*/
+        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.pic11);
+   /*     mBitmapOptions.inJustDecodeBounds = false;
+        mBitmapOptions.inBitmap = bitmap;//will cause the bitmap to be reused.
+        mBitmapOptions.inSampleSize = 1;*/
 
+        imageView.setImageBitmap(bitmap);
+
+    }
     private void requirePermissions() {
         if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSION);
@@ -72,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
         File dir = new File(path + "/WallpaperSlideshow/");
         dir.mkdirs();
 
-        File file = new File(dir,"name");
+        File file = new File(dir,"name.jpg");
         OutputStream out = null;
         try {
             out = new FileOutputStream(file);
