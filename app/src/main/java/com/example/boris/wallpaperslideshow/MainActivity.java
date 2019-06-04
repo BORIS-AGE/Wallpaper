@@ -1,10 +1,13 @@
 package com.example.boris.wallpaperslideshow;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.app.WallpaperManager;
+import android.content.ClipData;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -33,10 +36,8 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final int PICK_IMAGE = 123;
+    private static final int PICK_IMAGES = 123;
     private static final int MY_PERMISSION = 666;
-    private InputStream fls;
-    private List<Uri> imageUri = new ArrayList();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,18 +45,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         setDefaults();
         requirePermissions();
-
-        ImageView imageView = findViewById(R.id.imageView);
-      /*  BitmapFactory.Options mBitmapOptions = new BitmapFactory.Options();
-        mBitmapOptions.inJustDecodeBounds = true;
-        BitmapFactory.decodeResource(getResources(), R.drawable.pic11, mBitmapOptions);
-*/
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.pic11);
-   /*     mBitmapOptions.inJustDecodeBounds = false;
-        mBitmapOptions.inBitmap = bitmap;//will cause the bitmap to be reused.
-        mBitmapOptions.inSampleSize = 1;*/
-
-        imageView.setImageBitmap(bitmap);
 
     }
     private void requirePermissions() {
@@ -73,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String recordImage(Uri uri) {
         Bitmap img = null;
+        InputStream fls;
         try {
             fls = getContentResolver().openInputStream(uri);
             byte[] image = new byte[fls.available()];
@@ -87,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
         File dir = new File(path + "/WallpaperSlideshow/");
         dir.mkdirs();
 
-        File file = new File(dir,"name.jpg");
+        File file = new File(dir,System.currentTimeMillis() + ".jpg");
         OutputStream out = null;
         try {
             out = new FileOutputStream(file);
@@ -100,28 +90,62 @@ public class MainActivity extends AppCompatActivity {
             makeErrorNotification(e.toString());
         }
 
-        setWallpaper(file.getPath());
+        //setWallpaper(file.getPath());
 
         return file.getPath();
     }
 
-    private void setWallpaper(String url){
-        WallpaperManager wm = WallpaperManager.getInstance(getApplicationContext());
-        try {
-            File path = Environment.getExternalStorageDirectory();
-            wm.setBitmap(BitmapFactory.decodeFile(url));
-        }catch (Exception e){
-            makeErrorNotification(e.toString());
-        }
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK && requestCode == PICK_IMAGE) {
-            imageUri.add(data.getData());
-            recordImage(data.getData());
+        final List<String> imagesEncodedList;
+        try {
+            // When an Image is picked
+            if (requestCode == PICK_IMAGES && resultCode == RESULT_OK
+                    && null != data) {
+                imagesEncodedList = new ArrayList<String>();
+                if(data.getData()!=null){
+                    imagesEncodedList.add(data.getData().toString());
+                    makeErrorNotification("Selected Images: " + imagesEncodedList.size());
+                } else {
+                    if (data.getClipData() != null) {
+                        ClipData mClipData = data.getClipData();
+                        ArrayList<Uri> mArrayUri = new ArrayList<Uri>();
+                        for (int i = 0; i < mClipData.getItemCount(); i++) {
+                            imagesEncodedList.add(mClipData.getItemAt(i).getUri().toString());
+                        }
+                        makeErrorNotification("Selected Images: " + mArrayUri.size());
+                    }
+                }
+                //record list, made function run on UI just for fun, I know about Looper.prepare();  :)
+                final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this);
+                new Thread(){
+                    @Override
+                    public void run() {
+                        runOnUiThread(() -> {
+                                progressDialog.setMessage("recording files...");
+                                progressDialog.show();
+                            }
+                        );
+                        for (String url : imagesEncodedList){
+                            recordImage(Uri.parse(url));
+                        }
+                        imagesEncodedList.clear();
+                        runOnUiThread(() -> {
+                            if (progressDialog.isShowing())
+                                progressDialog.dismiss();
+                        });
+                    }
+                }.start();
+
+            } else {
+                makeErrorNotification("You haven't picked Image");
+            }
+        } catch (Exception e) {
+            makeErrorNotification("Something went wrong");
         }
+
+
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -144,13 +168,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void choose(View view) {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
-        startActivityForResult(intent, PICK_IMAGE);
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        startActivityForResult(Intent.createChooser(intent,"Select Picture"), PICK_IMAGES);
     }
 }
 /*    Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
     startActivityForResult(intent, PICK_IMAGE);*/
 
+/*private void setWallpaper(String url){
+        WallpaperManager wm = WallpaperManager.getInstance(getApplicationContext());
+        try {
+            File path = Environment.getExternalStorageDirectory();
+            wm.setBitmap(BitmapFactory.decodeFile(url));
+        }catch (Exception e){
+            makeErrorNotification(e.toString());
+        }
+    }*/
 
 
 

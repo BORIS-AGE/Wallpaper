@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.media.ThumbnailUtils;
 import android.os.Environment;
 import android.os.Handler;
 import android.service.wallpaper.WallpaperService;
@@ -13,52 +14,45 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class DroidWallpaper extends WallpaperService {
-    private Bitmap bitmap;
+    private int numberOfImages, currentImage;
+    private File[] files;
+
     @Override
     public WallpaperService.Engine onCreateEngine() {
-        System.out.println("came!!!!!");
-        try {
-            File path = Environment.getExternalStorageDirectory();
-            File dir = new File(path + "/WallpaperSlideshow/");
-//            dir.mkdirs();
-
-            File file = new File(dir,"name.jpg");
-            FileInputStream streamIn = new FileInputStream(file);
-            bitmap = BitmapFactory.decodeStream(streamIn); //This gets the image
-            streamIn.close();
-
-            //kostul
-            initMainBitmap(getResources(), R.drawable.pic11);
-
-            return new DroidWallpaperEngine(bitmap);
-        } catch (IOException e) {
-            System.out.println(e.toString());
-            Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
-            return null;
-        }
-
-
+            return new DroidWallpaperEngine();
     }
 
-    private void initMainBitmap(Resources res, int resId){
-        bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.pic11);
+    private Bitmap initMainBitmap() throws IOException{
+
+        File path = Environment.getExternalStorageDirectory();
+        File dir = new File(path + "/WallpaperSlideshow/");
+//            dir.mkdirs();
+        files = dir.listFiles();
+        numberOfImages = files.length;
+        if (currentImage >= numberOfImages)
+            currentImage = 0;
+        FileInputStream streamIn = new FileInputStream(files[currentImage++]);
+        Bitmap bitmap = BitmapFactory.decodeStream(streamIn); //This gets the image
+
+        streamIn.close();
+
+        return bitmap;
     }
 
     private class DroidWallpaperEngine extends WallpaperService.Engine {
 
-        private final int frameDuration = 20;
+        private final long frameDuration = TimeUnit.SECONDS.toMillis(5);
         private SurfaceHolder holder;
-        private Bitmap bitmap;
         private boolean visible;
         private Handler handler;
 
-        public DroidWallpaperEngine(Bitmap bitmap) {
-            this.bitmap = bitmap;
-            handler= new Handler();
-            //initMainBitmap(getResources(), R.drawable.pic11);
+        public DroidWallpaperEngine() {
+            handler = new Handler();
         }
 
         @Override
@@ -67,22 +61,33 @@ public class DroidWallpaper extends WallpaperService {
             this.holder = surfaceHolder;
         }
 
-        private Runnable drawImage = new Runnable() {
-            @Override
-            public void run() {
-                draw();
-            }
-        };
+        private Runnable drawImage = () -> draw();
 
         private void draw(){
             if (visible){
-                Canvas canvas = getSurfaceHolder().lockCanvas();
-                canvas.save();
-                canvas.scale(1f,1f);
-                canvas.drawBitmap(bitmap, new Matrix(), null);
-                canvas.restore();
-                holder.unlockCanvasAndPost(canvas);
+                Bitmap bitmap = null;
+                try {
+                    bitmap = initMainBitmap();
+                } catch (IOException e) {
+                    makeErrorNotification("error in drawing picture");
+                }
 
+                if (bitmap == null){
+                    makeErrorNotification("bitmap is null");
+                    return;
+                }
+
+                //makeErrorNotification("drawing: " + currentImage + " of " + numberOfImages + " \nname: " + files[currentImage - 1].getName() + "\nbitmap: " + bitmap.toString());
+                if (!holder.isCreating()){
+                    Canvas canvas = holder.lockCanvas();
+                    canvas.save();
+                    Bitmap thumbnail = ThumbnailUtils.extractThumbnail(bitmap,
+                            Resources.getSystem().getDisplayMetrics().widthPixels, Resources.getSystem().getDisplayMetrics().heightPixels);
+                    canvas.drawBitmap(thumbnail, new Matrix(), null);
+                    canvas.restore();
+
+                    holder.unlockCanvasAndPost(canvas);
+                }
                 handler.removeCallbacks(drawImage); // remove other handlers
                 handler.postDelayed(drawImage, frameDuration);// run next slide
             }
@@ -110,22 +115,15 @@ public class DroidWallpaper extends WallpaperService {
             visible = false;
             handler.removeCallbacks(drawImage);
         }
+
+
+    }
+
+    private void makeErrorNotification(String not){
+        System.out.println(not);
+        Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
     }
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// bitmap doest exchanges!!!!!!!!!!!!!!!!!!!!!!!
