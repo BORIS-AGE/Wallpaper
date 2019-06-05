@@ -117,6 +117,7 @@ public class DroidWallpaper extends WallpaperService {
         }
 
 
+
     }
 
     private void makeErrorNotification(String not){
