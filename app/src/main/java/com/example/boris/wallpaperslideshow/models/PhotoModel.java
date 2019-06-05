@@ -1,17 +1,19 @@
 package com.example.boris.wallpaperslideshow.models;
 
+import java.io.File;
+
 public class PhotoModel {
-    private String url;
+    private File file;
 
-    public PhotoModel(String url) {
-        this.url = url;
+    public PhotoModel(File file) {
+        this.file = file;
     }
 
-    public String getUrl() {
-        return url;
+    public File getFile() {
+        return file;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public void setFile(String url) {
+        this.file = file;
     }
 }

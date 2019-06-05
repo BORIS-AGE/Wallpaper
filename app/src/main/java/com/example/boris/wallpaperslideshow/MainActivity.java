@@ -2,28 +2,30 @@ package com.example.boris.wallpaperslideshow;
 
 import android.Manifest;
 import android.app.ProgressDialog;
-import android.app.WallpaperManager;
 import android.content.ClipData;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
-import android.provider.MediaStore;
-import android.service.wallpaper.WallpaperService;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.Toast;
+
+import com.example.boris.wallpaperslideshow.adapters.MyRecycler;
+import com.example.boris.wallpaperslideshow.models.PhotoModel;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -38,15 +40,40 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PICK_IMAGES = 123;
     private static final int MY_PERMISSION = 666;
+    private MyRecycler recycler;
+    private RecyclerView recyclerView;
+    private List<PhotoModel> photoModels;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        setDefaults();
         requirePermissions();
+        setDefaults();
+        getImages();
+        setRecycler();
 
     }
+
+    private void setRecycler() {
+        recycler = new MyRecycler(photoModels, this);
+        recyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(),2,RecyclerView.VERTICAL, false));
+        recyclerView.setAdapter(recycler);
+    }
+
+    private void getImages() {
+        File path = Environment.getExternalStorageDirectory();
+        File dir = new File(path + "/WallpaperSlideshow/");
+//            dir.mkdirs();
+        File[] files = dir.listFiles();
+        int numberOfImages = files.length;
+        if (numberOfImages == 0){
+            makeErrorNotification("no images found");
+            return;
+        }
+        for (File f : files) photoModels.add(new PhotoModel(f));
+    }
+
     private void requirePermissions() {
         if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSION);
@@ -58,6 +85,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setDefaults() {
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        recyclerView = findViewById(R.id.recycler);
+        photoModels = new ArrayList<>();
     }
 
     private String recordImage(Uri uri) {
@@ -93,6 +124,14 @@ public class MainActivity extends AppCompatActivity {
         //setWallpaper(file.getPath());
 
         return file.getPath();
+    }
+
+    public void choose(View view) {
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        startActivityForResult(Intent.createChooser(intent,"Select Picture"), PICK_IMAGES);
     }
 
     @Override
@@ -133,10 +172,13 @@ public class MainActivity extends AppCompatActivity {
                         runOnUiThread(() -> {
                             if (progressDialog.isShowing())
                                 progressDialog.dismiss();
+
+/*
+                            recycler.notifyDataSetChanged();
+*/
                         });
                     }
                 }.start();
-
             } else {
                 makeErrorNotification("You haven't picked Image");
             }
@@ -162,17 +204,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void makeErrorNotification(String not){
-        System.out.println(not);
-        Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.toolbar, menu);
+        return true;
     }
 
-    public void choose(View view) {
-        Intent intent = new Intent();
-        intent.setType("image/*");
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        intent.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(Intent.createChooser(intent,"Select Picture"), PICK_IMAGES);
+    public void makeErrorNotification(String not){
+        System.out.println(not);
+        Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
     }
 }
 /*    Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
