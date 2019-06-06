@@ -1,11 +1,15 @@
 package com.example.boris.wallpaperslideshow.adapters;
 
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.ThumbnailUtils;
 import android.view.LayoutInflater;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 
 import com.example.boris.wallpaperslideshow.MainActivity;
 import com.example.boris.wallpaperslideshow.R;
@@ -45,8 +49,10 @@ public class MyRecycler extends RecyclerView.Adapter<MyRecycler.MyHolder> {
         } catch (IOException e) {
             mainActivity.makeErrorNotification(e.toString() + "\nin recycler");
         }
+        Bitmap thumbnail = ThumbnailUtils.extractThumbnail(bitmap,
+                320, 500);
 
-        holder.imageView.setImageBitmap(bitmap);
+        holder.imageView.setImageBitmap(thumbnail);
     }
 
     @Override
@@ -61,6 +67,30 @@ public class MyRecycler extends RecyclerView.Adapter<MyRecycler.MyHolder> {
         public MyHolder(@NonNull View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.recyclerImage);
+            itemView.setOnLongClickListener(v -> {
+
+                PopupMenu popupMenu = new PopupMenu(mainActivity, itemView);
+                popupMenu.setOnMenuItemClickListener(item -> {
+                    switch (item.getItemId()){
+                        case R.id.deleteImage:
+                            boolean isDeleted = photoModels.get(getAdapterPosition()).getFile().delete();
+                            mainActivity.makeErrorNotification("Item is deleted: " + isDeleted);
+                            photoModels.remove(getAdapterPosition());
+                            notifyDataSetChanged();
+                            return true;
+                    }
+                    return false;
+                });
+                MenuInflater inflater = popupMenu.getMenuInflater();
+                inflater.inflate(R.menu.recycler_menu, popupMenu.getMenu());
+                popupMenu.show();
+                return true;
+            });
         }
+    }
+
+    public void addElem(List<PhotoModel> models){
+        photoModels = models;
+        notifyItemInserted(photoModels.size() - 1);
     }
 }

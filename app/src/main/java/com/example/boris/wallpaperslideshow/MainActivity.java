@@ -57,8 +57,6 @@ public class MainActivity extends AppCompatActivity {
         setDefaults();
         getImages();
         setRecycler();
-
-
     }
 
     private void setRecycler() {
@@ -168,15 +166,13 @@ public class MainActivity extends AppCompatActivity {
                             }
                     );
                 }
-
-                //setWallpaper(file.getPath());
                 runOnUiThread(() -> {
                     if (progressDialog.isShowing())
                         progressDialog.dismiss();
 
-
-                    recycler.notifyDataSetChanged();
-
+                    //resetting recycler
+                    photoModels.add(new PhotoModel(file));
+                    recycler.addElem(photoModels);
                 });
             }
         }.start();
@@ -192,6 +188,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         final List<String> imagesEncodedList;
         if (requestCode == PICK_IMAGES && resultCode == RESULT_OK) {
             if (null == data) {
@@ -203,7 +200,6 @@ public class MainActivity extends AppCompatActivity {
                 imagesEncodedList = new ArrayList<String>();
                 if (data.getData() != null) {
                     imagesEncodedList.add(data.getData().toString());
-                    makeErrorNotification("Selected Images: " + imagesEncodedList.size());
                 } else { // for many pictures
                     if (data.getClipData() != null) {
                         ClipData mClipData = data.getClipData();
@@ -235,8 +231,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
-        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -265,12 +259,8 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
     }
 
-
     private void cropImage(Uri uri) {
-//PICK IMAGE METHOD
-            CropImage.startPickImageActivity(this);
-
-//CROP REQUEST JAVA
+            //CROP REQUEST JAVA
             CropImage.activity(uri)
                     .setActivityMenuIconColor(R.color.textMain)
                     .setAspectRatio(Resources.getSystem().getDisplayMetrics().widthPixels, Resources.getSystem().getDisplayMetrics().heightPixels)

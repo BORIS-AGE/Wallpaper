@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Wallpaper slideshow</string>
+    <string name="delete_name_recycler">Delete</string>
 </resources>
