@@ -2,9 +2,11 @@ package com.example.boris.wallpaperslideshow;
 
 import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -20,12 +22,15 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Toast;
 
 import com.example.boris.wallpaperslideshow.adapters.MyRecycler;
 import com.example.boris.wallpaperslideshow.models.PhotoModel;
+import com.theartofdev.edmodo.cropper.CropImage;
+import com.theartofdev.edmodo.cropper.CropImageView;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -53,11 +58,12 @@ public class MainActivity extends AppCompatActivity {
         getImages();
         setRecycler();
 
+
     }
 
     private void setRecycler() {
         recycler = new MyRecycler(photoModels, this);
-        recyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(),2,RecyclerView.VERTICAL, false));
+        recyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(), 2, RecyclerView.VERTICAL, false));
         recyclerView.setAdapter(recycler);
     }
 
@@ -67,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
 //            dir.mkdirs();
         File[] files = dir.listFiles();
         int numberOfImages = files.length;
-        if (numberOfImages == 0){
+        if (numberOfImages == 0) {
             makeErrorNotification("no images found");
             return;
         }
@@ -75,13 +81,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requirePermissions() {
-        if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+        if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSION);
-        }else if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        } else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSION);
-        }else if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.SET_WALLPAPER) != PackageManager.PERMISSION_GRANTED){
+        } else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.SET_WALLPAPER) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SET_WALLPAPER}, MY_PERMISSION);
+        } else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, MY_PERMISSION);
         }
+
     }
 
     private void setDefaults() {
@@ -108,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
         File dir = new File(path + "/WallpaperSlideshow/");
         dir.mkdirs();
 
-        File file = new File(dir,System.currentTimeMillis() + ".jpg");
+        File file = new File(dir, System.currentTimeMillis() + ".jpg");
         OutputStream out = null;
         try {
             out = new FileOutputStream(file);
@@ -126,26 +135,76 @@ public class MainActivity extends AppCompatActivity {
         return file.getPath();
     }
 
+    private void recordImage(Bitmap bitmap) {
+        final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this);
+        final File file = null;
+        new Thread() {
+            @Override
+            public void run() {
+                runOnUiThread(() -> {
+                            progressDialog.setMessage("recording files...");
+                            progressDialog.show();
+                        }
+                );
+                File path = Environment.getExternalStorageDirectory();
+                File dir = new File(path + "/WallpaperSlideshow/");
+                dir.mkdirs();
+
+                File file = new File(dir, System.currentTimeMillis() + ".jpg");
+                OutputStream out = null;
+                try {
+                    out = new FileOutputStream(file);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                    out.flush();
+                    out.close();
+                } catch (FileNotFoundException e) {
+                    runOnUiThread(() -> {
+                                makeErrorNotification(e.toString());
+                            }
+                    );
+                } catch (IOException e) {
+                    runOnUiThread(() -> {
+                                makeErrorNotification(e.toString());
+                            }
+                    );
+                }
+
+                //setWallpaper(file.getPath());
+                runOnUiThread(() -> {
+                    if (progressDialog.isShowing())
+                        progressDialog.dismiss();
+
+
+                    recycler.notifyDataSetChanged();
+
+                });
+            }
+        }.start();
+    }
+
     public void choose(View view) {
         Intent intent = new Intent();
         intent.setType("image/*");
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(Intent.createChooser(intent,"Select Picture"), PICK_IMAGES);
+        startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGES);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         final List<String> imagesEncodedList;
-        try {
+        if (requestCode == PICK_IMAGES && resultCode == RESULT_OK) {
+            if (null == data) {
+                makeErrorNotification("You haven't picked Image");
+                return;
+            }
+            try {
             // When an Image is picked
-            if (requestCode == PICK_IMAGES && resultCode == RESULT_OK
-                    && null != data) {
                 imagesEncodedList = new ArrayList<String>();
-                if(data.getData()!=null){
+                if (data.getData() != null) {
                     imagesEncodedList.add(data.getData().toString());
                     makeErrorNotification("Selected Images: " + imagesEncodedList.size());
-                } else {
+                } else { // for many pictures
                     if (data.getClipData() != null) {
                         ClipData mClipData = data.getClipData();
                         ArrayList<Uri> mArrayUri = new ArrayList<Uri>();
@@ -156,51 +215,41 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 //record list, made function run on UI just for fun, I know about Looper.prepare();  :)
-                final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this);
-                new Thread(){
-                    @Override
-                    public void run() {
-                        runOnUiThread(() -> {
-                                progressDialog.setMessage("recording files...");
-                                progressDialog.show();
-                            }
-                        );
-                        for (String url : imagesEncodedList){
-                            recordImage(Uri.parse(url));
-                        }
-                        imagesEncodedList.clear();
-                        runOnUiThread(() -> {
-                            if (progressDialog.isShowing())
-                                progressDialog.dismiss();
-
-/*
-                            recycler.notifyDataSetChanged();
-*/
-                        });
-                    }
-                }.start();
-            } else {
-                makeErrorNotification("You haven't picked Image");
+                for (String url : imagesEncodedList) {
+                    cropImage(Uri.parse(url));  // start cropping image
+                }
+                imagesEncodedList.clear();
+            } catch (Exception e) {
+                makeErrorNotification(e.toString() + "\nMainActivity -> onActivityResult");
             }
-        } catch (Exception e) {
-            makeErrorNotification("Something went wrong");
+        } else
+        //RESULT FROM CROPING ACTIVITY
+        if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
+            CropImage.ActivityResult result = CropImage.getActivityResult(data);
+            if (resultCode == RESULT_OK) {
+                try {
+                    Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), result.getUri());
+                    recordImage(bitmap);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
-
 
         super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch (requestCode){
+        switch (requestCode) {
             case MY_PERMISSION:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(MainActivity.this, "Permission garanted", Toast.LENGTH_SHORT).show();
-                }else{
+                } else {
                     Toast.makeText(MainActivity.this, "Permission denied", Toast.LENGTH_SHORT).show();
                     finish();
                 }
-            break;
+                break;
         }
     }
 
@@ -211,23 +260,39 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    public void makeErrorNotification(String not){
+    public void makeErrorNotification(String not) {
         System.out.println(not);
         Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
     }
-}
-/*    Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
-    startActivityForResult(intent, PICK_IMAGE);*/
 
-/*private void setWallpaper(String url){
-        WallpaperManager wm = WallpaperManager.getInstance(getApplicationContext());
-        try {
-            File path = Environment.getExternalStorageDirectory();
-            wm.setBitmap(BitmapFactory.decodeFile(url));
-        }catch (Exception e){
-            makeErrorNotification(e.toString());
+
+    private void cropImage(Uri uri) {
+//PICK IMAGE METHOD
+            CropImage.startPickImageActivity(this);
+
+//CROP REQUEST JAVA
+            CropImage.activity(uri)
+                    .setActivityMenuIconColor(R.color.textMain)
+                    .setAspectRatio(Resources.getSystem().getDisplayMetrics().widthPixels, Resources.getSystem().getDisplayMetrics().heightPixels)
+                    .setBackgroundColor(R.color.colorPrimary)
+                    .setMultiTouchEnabled(true)
+                    .setGuidelines(CropImageView.Guidelines.ON)
+                    .setMultiTouchEnabled(true)
+                    .start(this);
         }
-    }*/
+
+
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
