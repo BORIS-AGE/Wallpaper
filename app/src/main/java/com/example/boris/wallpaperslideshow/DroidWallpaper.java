@@ -34,7 +34,12 @@ public class DroidWallpaper extends WallpaperService {
         File dir = new File(path + "/WallpaperSlideshow/");
 //            dir.mkdirs();
         files = dir.listFiles();
+
         numberOfImages = files.length;
+        if (numberOfImages == 0){
+            return BitmapFactory.decodeResource(getResources(), R.drawable.pic11);
+        }
+
         if (currentImage >= numberOfImages)
             currentImage = 0;
         FileInputStream streamIn = new FileInputStream(files[currentImage++]);

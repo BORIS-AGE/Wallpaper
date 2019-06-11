@@ -1,15 +1,20 @@
 package com.example.boris.wallpaperslideshow;
 
 import android.Manifest;
+import android.app.ActivityManager;
 import android.app.ProgressDialog;
+import android.app.WallpaperManager;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 
 import androidx.annotation.NonNull;
@@ -59,6 +64,26 @@ public class MainActivity extends AppCompatActivity {
         setDefaults();
         getImages();
         setRecycler();
+
+        if (!isMyServiceRunning(DroidWallpaper.class)){
+            setWallpaper();
+        }
+    }
+
+    private void setWallpaper(){
+        Intent i = new Intent();
+
+        if(Build.VERSION.SDK_INT > 15){
+            i.setAction(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
+
+            String p = DroidWallpaper.class.getPackage().getName();
+            String c = DroidWallpaper.class.getCanonicalName();
+            i.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(p, c));
+        }
+        else{
+            i.setAction(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER);
+        }
+        startActivityForResult(i, 0);
     }
 
     private void setRecycler() {
@@ -248,7 +273,15 @@ public class MainActivity extends AppCompatActivity {
                     .start(this);
     }
 
-
+    public boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getApplication().getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 
