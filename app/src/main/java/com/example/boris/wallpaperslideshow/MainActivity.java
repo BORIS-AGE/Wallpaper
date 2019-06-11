@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
@@ -45,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PICK_IMAGES = 123;
     private static final int MY_PERMISSION = 666;
+    public static final String PREFETNCE_KEY = "com.example.boris.wallpaperslideshow";
     private MyRecycler recycler;
     private RecyclerView recyclerView;
     private List<PhotoModel> photoModels;
@@ -96,41 +98,6 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         recyclerView = findViewById(R.id.recycler);
         photoModels = new ArrayList<>();
-    }
-
-    private String recordImage(Uri uri) {
-        Bitmap img = null;
-        InputStream fls;
-        try {
-            fls = getContentResolver().openInputStream(uri);
-            byte[] image = new byte[fls.available()];
-            fls.read(image);
-            fls.close();
-            img = BitmapFactory.decodeByteArray(image, 0, image.length);
-        } catch (Exception e) {
-            makeErrorNotification(e.toString());
-        }
-
-        File path = Environment.getExternalStorageDirectory();
-        File dir = new File(path + "/WallpaperSlideshow/");
-        dir.mkdirs();
-
-        File file = new File(dir, System.currentTimeMillis() + ".jpg");
-        OutputStream out = null;
-        try {
-            out = new FileOutputStream(file);
-            img.compress(Bitmap.CompressFormat.JPEG, 100, out);
-            out.flush();
-            out.close();
-        } catch (FileNotFoundException e) {
-            makeErrorNotification(e.toString());
-        } catch (IOException e) {
-            makeErrorNotification(e.toString());
-        }
-
-        //setWallpaper(file.getPath());
-
-        return file.getPath();
     }
 
     private void recordImage(Bitmap bitmap) {
@@ -254,6 +221,16 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.settings:
+                startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+        }
+        return false;
+    }
+
     public void makeErrorNotification(String not) {
         System.out.println(not);
         Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
@@ -269,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
                     .setGuidelines(CropImageView.Guidelines.ON)
                     .setMultiTouchEnabled(true)
                     .start(this);
-        }
+    }
 
 
 }

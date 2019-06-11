@@ -9,6 +9,7 @@ import android.media.ThumbnailUtils;
 import android.os.Environment;
 import android.os.Handler;
 import android.service.wallpaper.WallpaperService;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.widget.Toast;
 
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class DroidWallpaper extends WallpaperService {
     private int numberOfImages, currentImage;
     private File[] files;
+    private long lastPressTime = 0;
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -45,7 +47,7 @@ public class DroidWallpaper extends WallpaperService {
 
     private class DroidWallpaperEngine extends WallpaperService.Engine {
 
-        private final long frameDuration = TimeUnit.SECONDS.toMillis(5);
+        private long frameDuration = TimeUnit.SECONDS.toMillis(5);
         private SurfaceHolder holder;
         private boolean visible;
         private Handler handler;
@@ -87,6 +89,13 @@ public class DroidWallpaper extends WallpaperService {
 
                     holder.unlockCanvasAndPost(canvas);
                 }
+
+                //get next slide duration
+                long duration = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
+                if (duration != 0){
+                    frameDuration = TimeUnit.SECONDS.toMillis(duration);
+                }
+
                 handler.removeCallbacks(drawImage); // remove other handlers
                 handler.postDelayed(drawImage, frameDuration);// run next slide
             }
@@ -115,14 +124,28 @@ public class DroidWallpaper extends WallpaperService {
             handler.removeCallbacks(drawImage);
         }
 
+        @Override
+        public void onTouchEvent(MotionEvent event) {
+            super.onTouchEvent(event);
 
-
+            //double click event
+            if(event.getAction() == MotionEvent.ACTION_DOWN){
+                if (System.currentTimeMillis() - lastPressTime < 500){
+                    lastPressTime = 0;
+                    draw();
+                }else{
+                    lastPressTime = System.currentTimeMillis();
+                }
+            }
+        }
     }
 
     private void makeErrorNotification(String not){
         System.out.println(not);
         Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
     }
+
+
 }
 
 
