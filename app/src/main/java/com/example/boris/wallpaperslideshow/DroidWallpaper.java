@@ -21,7 +21,9 @@ import java.util.concurrent.TimeUnit;
 public class DroidWallpaper extends WallpaperService {
     private int numberOfImages, currentImage;
     private File[] files;
-    private long lastPressTime = 0;
+    private long lastPressTime = 0, lastTimeAll = 0;
+    private Matrix matrix = new Matrix();
+    private long duration = 0;
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -32,7 +34,7 @@ public class DroidWallpaper extends WallpaperService {
 
         File path = Environment.getExternalStorageDirectory();
         File dir = new File(path + "/WallpaperSlideshow/");
-//            dir.mkdirs();
+        dir.mkdirs();
         files = dir.listFiles();
 
         numberOfImages = files.length;
@@ -75,7 +77,7 @@ public class DroidWallpaper extends WallpaperService {
                 try {
                     bitmap = initMainBitmap();
                 } catch (IOException e) {
-                    makeErrorNotification("error in drawing picture");
+                    makeErrorNotification("error in drawing picture\n" + e.toString());
                 }
 
                 if (bitmap == null){
@@ -89,14 +91,15 @@ public class DroidWallpaper extends WallpaperService {
                     canvas.save();
                     Bitmap thumbnail = ThumbnailUtils.extractThumbnail(bitmap,
                             Resources.getSystem().getDisplayMetrics().widthPixels, Resources.getSystem().getDisplayMetrics().heightPixels);
-                    canvas.drawBitmap(thumbnail, new Matrix(), null);
+                    canvas.drawBitmap(thumbnail, matrix, null);
                     canvas.restore();
 
+                    lastTimeAll = System.currentTimeMillis();
                     holder.unlockCanvasAndPost(canvas);
                 }
 
                 //get next slide duration
-                long duration = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
+                duration = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
                 if (duration != 0){
                     frameDuration = TimeUnit.SECONDS.toMillis(duration);
                 }
@@ -110,6 +113,7 @@ public class DroidWallpaper extends WallpaperService {
         public void onVisibilityChanged(boolean visible) {
             this.visible = visible;
             if (visible){
+                if (lastTimeAll + TimeUnit.SECONDS.toMillis(duration) < System.currentTimeMillis())
                 handler.post(drawImage);
             }else{
                 handler.removeCallbacks(drawImage);
