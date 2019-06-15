@@ -5,6 +5,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.media.ThumbnailUtils;
 import android.os.Environment;
 import android.os.Handler;
@@ -19,7 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 public class DroidWallpaper extends WallpaperService {
-    private int numberOfImages, currentImage;
+    private int numberOfImages, currentImage, fireX, fireY;
     private File[] files;
     private long lastPressTime = 0, lastTimeAll = 0;
     private Matrix matrix = new Matrix();
@@ -27,10 +29,10 @@ public class DroidWallpaper extends WallpaperService {
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
-            return new DroidWallpaperEngine();
+        return new DroidWallpaperEngine();
     }
 
-    private Bitmap initMainBitmap() throws IOException{
+    private Bitmap initMainBitmap() throws IOException {
 
         File path = Environment.getExternalStorageDirectory();
         File dir = new File(path + "/WallpaperSlideshow/");
@@ -38,7 +40,7 @@ public class DroidWallpaper extends WallpaperService {
         files = dir.listFiles();
 
         numberOfImages = files.length;
-        if (numberOfImages == 0){
+        if (numberOfImages == 0) {
             return BitmapFactory.decodeResource(getResources(), R.drawable.pic11);
         }
 
@@ -46,8 +48,9 @@ public class DroidWallpaper extends WallpaperService {
             currentImage = 0;
         FileInputStream streamIn = new FileInputStream(files[currentImage++]);
         Bitmap bitmap = BitmapFactory.decodeStream(streamIn); //This gets the image
-
         streamIn.close();
+        bitmap = ThumbnailUtils.extractThumbnail(bitmap,
+                Resources.getSystem().getDisplayMetrics().widthPixels, Resources.getSystem().getDisplayMetrics().heightPixels);
 
         return bitmap;
     }
@@ -71,8 +74,8 @@ public class DroidWallpaper extends WallpaperService {
 
         private Runnable drawImage = () -> draw();
 
-        private void draw(){
-            if (visible){
+        private void draw() {
+            if (visible) {
                 Bitmap bitmap = null;
                 try {
                     bitmap = initMainBitmap();
@@ -80,42 +83,54 @@ public class DroidWallpaper extends WallpaperService {
                     makeErrorNotification("error in drawing picture\n" + e.toString());
                 }
 
-                if (bitmap == null){
+                if (bitmap == null) {
                     makeErrorNotification("bitmap is null");
                     return;
                 }
 
-                //makeErrorNotification("drawing: " + currentImage + " of " + numberOfImages + " \nname: " + files[currentImage - 1].getName() + "\nbitmap: " + bitmap.toString());
-                if (!holder.isCreating()){
-                    Canvas canvas = holder.lockCanvas();
-                    canvas.save();
-                    Bitmap thumbnail = ThumbnailUtils.extractThumbnail(bitmap,
-                            Resources.getSystem().getDisplayMetrics().widthPixels, Resources.getSystem().getDisplayMetrics().heightPixels);
-                    canvas.drawBitmap(thumbnail, matrix, null);
-                    canvas.restore();
 
-                    lastTimeAll = System.currentTimeMillis();
-                    holder.unlockCanvasAndPost(canvas);
+                //makeErrorNotification("drawing: " + currentImage + " of " + numberOfImages + " \nname: " + files[currentImage - 1].getName() + "\nbitmap: " + bitmap.toString());
+                while (lastTimeAll + frameDuration > System.currentTimeMillis()) {
+                    //for (int i = 0; i < 100; i++) {
+
+                    if (!holder.isCreating()) {
+                        Canvas canvas = holder.lockCanvas();
+                        canvas.save();
+                        canvas.drawBitmap(bitmap, matrix, null);
+                        canvas.restore();
+
+                        Paint paint = new Paint();
+                        paint.setStyle(Paint.Style.FILL);
+                        Path path1 = new Path();
+
+                        path1.addCircle(100 + fireX++, 100 + fireY++, 50, Path.Direction.CCW);
+                        canvas.drawPath(path1, paint);
+                        path1.reset();
+
+                        holder.unlockCanvasAndPost(canvas);
+                    }
                 }
 
+                lastTimeAll = System.currentTimeMillis();
                 //get next slide duration
                 duration = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
-                if (duration != 0){
+                if (duration != 0) {
                     frameDuration = TimeUnit.SECONDS.toMillis(duration);
                 }
 
                 handler.removeCallbacks(drawImage); // remove other handlers
-                handler.postDelayed(drawImage, frameDuration);// run next slide
+                //handler.postDelayed(drawImage, frameDuration);// run next slide
+                handler.post(drawImage);// run next slide
             }
         }
 
         @Override
         public void onVisibilityChanged(boolean visible) {
             this.visible = visible;
-            if (visible){
+            if (visible) {
                 if (lastTimeAll + TimeUnit.SECONDS.toMillis(duration) < System.currentTimeMillis())
-                handler.post(drawImage);
-            }else{
+                    handler.post(drawImage);
+            } else {
                 handler.removeCallbacks(drawImage);
             }
         }
@@ -138,18 +153,18 @@ public class DroidWallpaper extends WallpaperService {
             super.onTouchEvent(event);
 
             //double click event
-            if(event.getAction() == MotionEvent.ACTION_DOWN){
-                if (System.currentTimeMillis() - lastPressTime < 500){
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                if (System.currentTimeMillis() - lastPressTime < 500) {
                     lastPressTime = 0;
                     draw();
-                }else{
+                } else {
                     lastPressTime = System.currentTimeMillis();
                 }
             }
         }
     }
 
-    private void makeErrorNotification(String not){
+    private void makeErrorNotification(String not) {
         System.out.println(not);
         Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
     }
