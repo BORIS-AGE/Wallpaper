@@ -27,6 +27,7 @@ public class DroidWallpaper extends WallpaperService {
     private Matrix matrix = new Matrix();
     private long duration = 0;
     private boolean fireReverse = false, endThread = false;
+    private int width = Resources.getSystem().getDisplayMetrics().widthPixels, height = Resources.getSystem().getDisplayMetrics().heightPixels;
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -92,24 +93,25 @@ public class DroidWallpaper extends WallpaperService {
 
                 //makeErrorNotification("drawing: " + currentImage + " of " + numberOfImages + " \nname: " + files[currentImage - 1].getName() + "\nbitmap: " + bitmap.toString());
                 Bitmap finalBitmap = bitmap;
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        while (lastTimeAll + frameDuration > System.currentTimeMillis() && !endThread) {
-                            if (!holder.isCreating()) {
-                                Canvas canvas = holder.lockCanvas();
-                                canvas.save();
-                                canvas.drawBitmap(finalBitmap, matrix, null); // draw main picture
-                                canvas.restore();
+                Paint paint = new Paint();
+                paint.setStrokeWidth(8);
+                paint.setStyle(Paint.Style.FILL);
+                Path path1 = new Path();
+                new Thread(() -> {
+                    while (lastTimeAll + frameDuration > System.currentTimeMillis() && !endThread) {
+                        if (!holder.isCreating()) {
+                            Canvas canvas = holder.lockCanvas();
+                            canvas.save();
+                            canvas.drawBitmap(finalBitmap, matrix, null); // draw main picture
+                            canvas.restore();
 
-                                //draw fire
-                                drowFire(canvas);
+                            //draw fire
+                            drowFire(canvas, path1, paint);
 
-                                holder.unlockCanvasAndPost(canvas);
-                            }
+                            holder.unlockCanvasAndPost(canvas);
                         }
-                        endThread = false;
                     }
+                    endThread = false;
                 }).start();
 
 
@@ -126,33 +128,45 @@ public class DroidWallpaper extends WallpaperService {
             }
         }
 
-        private void drowFire(Canvas canvas) {
+        private void drowFire(Canvas canvas, Path path1, Paint paint) {
 
-            Paint paint = new Paint();
-            paint.setStyle(Paint.Style.FILL);
-            Path path1 = new Path();
 
-            //for (int i = 0; i < 10; i++) {
-                float x = 0;
+            for (int n = 0; n < 20; n++) {
                 if (!fireReverse) {
-                    x = fireX++ * 4 + 100;
-                    if (fireX == 100) fireReverse = true;
-                }else{
-                    x = fireX-- * 4 + 100;
-                    if (fireX == 0) fireReverse = true;
+                    if (getX(fireX  + n) > width * 7 / 8) fireReverse = true;
+                    path1.addCircle(getX(fireX + n), getY(fireX + n), 30 + n, Path.Direction.CW);
+                } else {
+                    if (getX(fireX  + n) < width / 8) fireReverse = false;
+                    path1.addCircle(getX(fireX + n), getY(fireX + n), 50 - n, Path.Direction.CW);
                 }
-                    path1.addCircle(
-                            x,
-                            (float) Math.sin(Math.PI * (fireX * 0.04)) * 100 + Resources.getSystem().getDisplayMetrics().heightPixels / 2,
-                            50, Path.Direction.CCW);
 
 
-                    if (fireX == 0) fireReverse = false;
+            }
 
+            if (!fireReverse) {
+                if (getX(fireX) > width * 7 / 8) fireReverse = true;
+                fireX++;
+            } else {
+                if (getX(fireX) < width / 8) fireReverse = false;
+                fireX--;
+            }
 
-                canvas.drawPath(path1, paint);
-                path1.reset();
-            //}
+            fireY++;
+            canvas.drawPath(path1, paint);
+            path1.reset();
+        }
+
+        private float getX(int i){
+            return (float) ((i * 4) + width / 8);
+        }
+        private float getY(int i){
+            float y;
+            if (fireReverse) {
+                y = (float) Math.sin((i) * 0.046) * 100 + height / 2;
+            } else {
+                y = (float) Math.sin((-i) * 0.046) * 100 + height / 2;
+            }
+            return y;
         }
 
         @Override
@@ -176,6 +190,7 @@ public class DroidWallpaper extends WallpaperService {
         public void onSurfaceDestroyed(SurfaceHolder holder) {
             super.onSurfaceDestroyed(holder);
             visible = false;
+            endThread = true;
             handler.removeCallbacks(drawImage);
         }
 
@@ -200,8 +215,6 @@ public class DroidWallpaper extends WallpaperService {
         System.out.println(not);
         Toast.makeText(getApplicationContext(), not, Toast.LENGTH_LONG).show();
     }
-
-
 }
 
 
