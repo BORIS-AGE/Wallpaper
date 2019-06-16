@@ -26,6 +26,7 @@ public class DroidWallpaper extends WallpaperService {
     private long lastPressTime = 0, lastTimeAll = 0;
     private Matrix matrix = new Matrix();
     private long duration = 0;
+    private boolean fireReverse = false, endThread = false;
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -90,26 +91,27 @@ public class DroidWallpaper extends WallpaperService {
 
 
                 //makeErrorNotification("drawing: " + currentImage + " of " + numberOfImages + " \nname: " + files[currentImage - 1].getName() + "\nbitmap: " + bitmap.toString());
-                while (lastTimeAll + frameDuration > System.currentTimeMillis()) {
-                    //for (int i = 0; i < 100; i++) {
+                Bitmap finalBitmap = bitmap;
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        while (lastTimeAll + frameDuration > System.currentTimeMillis() && !endThread) {
+                            if (!holder.isCreating()) {
+                                Canvas canvas = holder.lockCanvas();
+                                canvas.save();
+                                canvas.drawBitmap(finalBitmap, matrix, null); // draw main picture
+                                canvas.restore();
 
-                    if (!holder.isCreating()) {
-                        Canvas canvas = holder.lockCanvas();
-                        canvas.save();
-                        canvas.drawBitmap(bitmap, matrix, null);
-                        canvas.restore();
+                                //draw fire
+                                drowFire(canvas);
 
-                        Paint paint = new Paint();
-                        paint.setStyle(Paint.Style.FILL);
-                        Path path1 = new Path();
-
-                        path1.addCircle(100 + fireX++, 100 + fireY++, 50, Path.Direction.CCW);
-                        canvas.drawPath(path1, paint);
-                        path1.reset();
-
-                        holder.unlockCanvasAndPost(canvas);
+                                holder.unlockCanvasAndPost(canvas);
+                            }
+                        }
+                        endThread = false;
                     }
-                }
+                }).start();
+
 
                 lastTimeAll = System.currentTimeMillis();
                 //get next slide duration
@@ -119,9 +121,38 @@ public class DroidWallpaper extends WallpaperService {
                 }
 
                 handler.removeCallbacks(drawImage); // remove other handlers
-                //handler.postDelayed(drawImage, frameDuration);// run next slide
-                handler.post(drawImage);// run next slide
+                handler.postDelayed(drawImage, frameDuration);// run next slide
+                //handler.post(drawImage);// run next slide
             }
+        }
+
+        private void drowFire(Canvas canvas) {
+
+            Paint paint = new Paint();
+            paint.setStyle(Paint.Style.FILL);
+            Path path1 = new Path();
+
+            //for (int i = 0; i < 10; i++) {
+                float x = 0;
+                if (!fireReverse) {
+                    x = fireX++ * 4 + 100;
+                    if (fireX == 100) fireReverse = true;
+                }else{
+                    x = fireX-- * 4 + 100;
+                    if (fireX == 0) fireReverse = true;
+                }
+                    path1.addCircle(
+                            x,
+                            (float) Math.sin(Math.PI * (fireX * 0.04)) * 100 + Resources.getSystem().getDisplayMetrics().heightPixels / 2,
+                            50, Path.Direction.CCW);
+
+
+                    if (fireX == 0) fireReverse = false;
+
+
+                canvas.drawPath(path1, paint);
+                path1.reset();
+            //}
         }
 
         @Override
@@ -156,6 +187,7 @@ public class DroidWallpaper extends WallpaperService {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 if (System.currentTimeMillis() - lastPressTime < 500) {
                     lastPressTime = 0;
+                    endThread = true;
                     draw();
                 } else {
                     lastPressTime = System.currentTimeMillis();
