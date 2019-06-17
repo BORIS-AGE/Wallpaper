@@ -105,7 +105,7 @@ public class DroidWallpaper extends WallpaperService {
                 paint.setStyle(Paint.Style.FILL);
                 Path path1 = new Path();
                 new Thread(() -> {
-                    while (lastTimeAll + frameDuration > System.currentTimeMillis() && !endThread) {
+                    while (lastTimeAll + frameDuration - 100 > System.currentTimeMillis() && !endThread) {
                         if (!holder.isCreating()) {
                             Canvas canvas = holder.lockCanvas();
                             //canvas.save();
@@ -150,8 +150,9 @@ public class DroidWallpaper extends WallpaperService {
             if (flyToFinger){
                 arrX.add(getXfly());
                 arrY.add(getYfly());
-                for (int n = arrX.size() - numberOfCircles - 1; n < arrX.size() ; n++) {
-                    path1.addCircle(arrX.get(n), arrY.get(n), 5 + 20, Path.Direction.CW);
+                float i = 0;
+                for (int n = arrX.size() - numberOfCircles - 1; n < arrX.size(); n++) {
+                    path1.addCircle(arrX.get(n), arrY.get(n), 5 + (i++ / 100 * sizeOfCircles), Path.Direction.CW);
                 }
             }
 
