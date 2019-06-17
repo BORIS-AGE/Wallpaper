@@ -18,6 +18,9 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class DroidWallpaper extends WallpaperService {
@@ -26,12 +29,13 @@ public class DroidWallpaper extends WallpaperService {
     private long lastPressTime = 0, lastTimeAll = 0;
     private Matrix matrix = new Matrix();
     private long duration = 0;
-    private boolean endThread = false;
+    private boolean endThread = false, normalMode = true, flyToFinger = false;
     private int width = Resources.getSystem().getDisplayMetrics().widthPixels, height = Resources.getSystem().getDisplayMetrics().heightPixels;
-    private double fireX = 0.01;
+    private float fireX, fireY, X = 0.01f, fingerX, fingerY;
+    private List<Float> arrX = new ArrayList<>(), arrY = new ArrayList<>();
 
-    private float numberOfCircles = 10, sizeOfCircles = 20, speedOfCircles = 0.04f;
-
+    private float speedOfCircles = 0.04f;
+    private int numberOfCircles = 100, sizeOfCircles = 20;
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -94,7 +98,6 @@ public class DroidWallpaper extends WallpaperService {
                     return;
                 }
 
-
                 //makeErrorNotification("drawing: " + currentImage + " of " + numberOfImages + " \nname: " + files[currentImage - 1].getName() + "\nbitmap: " + bitmap.toString());
                 Bitmap finalBitmap = bitmap;
                 Paint paint = new Paint();
@@ -105,13 +108,12 @@ public class DroidWallpaper extends WallpaperService {
                     while (lastTimeAll + frameDuration > System.currentTimeMillis() && !endThread) {
                         if (!holder.isCreating()) {
                             Canvas canvas = holder.lockCanvas();
-                            canvas.save();
+                            //canvas.save();
                             canvas.drawBitmap(finalBitmap, matrix, null); // draw main picture
-                            canvas.restore();
+                            //canvas.restore();
 
                             //draw fire
                             drowFire(canvas, path1, paint);
-
                             holder.unlockCanvasAndPost(canvas);
                         }
                     }
@@ -132,26 +134,55 @@ public class DroidWallpaper extends WallpaperService {
             }
         }
 
-        private void drowFire(Canvas canvas, Path path1, Paint paint) { //274
-            for (float n = 0; n < numberOfCircles/10; n+=speedOfCircles) {
-
-                path1.addCircle(getX(fireX + n), getY(fireX + n), 5 + (n * sizeOfCircles), Path.Direction.CW);
-                System.out.println("X = " + fireX + " - " + getX(fireX) + " Y = " + fireX + " - " + getY(fireX));
+        private void drowFire(Canvas canvas, Path path1, Paint paint) {
+            if (normalMode){
+                //clear lists
+                arrY.clear();
+                arrX.clear();
+                int i = 0;
+                for (float n = 0; n < numberOfCircles / 100; n += 0.01) {
+                    path1.addCircle(getX(X + n), getY(X + n), 5 + (n * sizeOfCircles), Path.Direction.CW);
+                    arrX.add(i, getX(X + n)); //record last value X
+                    arrY.add(i++, getY(X + n)); //record last value Y
+                }
+                X += speedOfCircles;
             }
-            fireX += 0.01;
+            if (flyToFinger){
+                arrX.add(getXfly());
+                arrY.add(getYfly());
+                for (int n = arrX.size() - numberOfCircles - 1; n < arrX.size() ; n++) {
+                    path1.addCircle(arrX.get(n), arrY.get(n), 5 + 20, Path.Direction.CW);
+                }
+            }
 
             canvas.drawPath(path1, paint);
             path1.reset();
+
         }
 
-        private float getX(double i) {
-            //double scale = 2 / (3 - Math.cos(2 * i));
-            return (float) ( Math.cos(i) * 270 + width/2);
+        private float getX(float i) {
+            //float scale = 2 / (3 - (float)Math.cos(2 * i));
+            fireX = (float) Math.cos(i) * 270 + width / 2;
+            return fireX;
         }
 
-        private float getY(double i) {
+        private float getY(float i) {
             //double scale = 2 / (3 - Math.cos(2 * i));
-            return (float) ((Math.sin(2 * i) / 2) * 270 + height/2);
+            fireY = (float) ((Math.sin(2 * i) / 2) * 270 + height / 2);
+            return fireY;
+        }
+
+        private float getXfly() {
+            float distanceX = fingerX - fireX;
+            fireX += distanceX/10;
+            return fireX;
+
+        }
+
+        private float getYfly() {
+            float distance = fingerY - fireY;
+            fireY += distance/10;
+            return fireY;
         }
 
         @Override
@@ -183,8 +214,13 @@ public class DroidWallpaper extends WallpaperService {
         public void onTouchEvent(MotionEvent event) {
             super.onTouchEvent(event);
 
-            //double click event
+            fingerX = event.getX();
+            fingerY = event.getY();
+
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                flyToFinger = true;
+                normalMode = false;
+                //double click event
                 if (System.currentTimeMillis() - lastPressTime < 500) {
                     lastPressTime = 0;
                     endThread = true;
@@ -192,6 +228,10 @@ public class DroidWallpaper extends WallpaperService {
                 } else {
                     lastPressTime = System.currentTimeMillis();
                 }
+            }
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                flyToFinger = false;
+                normalMode = true;
             }
         }
     }
