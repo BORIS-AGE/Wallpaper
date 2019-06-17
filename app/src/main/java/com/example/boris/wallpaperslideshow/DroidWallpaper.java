@@ -21,14 +21,17 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 public class DroidWallpaper extends WallpaperService {
-    private int numberOfImages, currentImage, fireX, fireY, part = 1;
+    private int numberOfImages, currentImage;
     private File[] files;
     private long lastPressTime = 0, lastTimeAll = 0;
     private Matrix matrix = new Matrix();
     private long duration = 0;
-    private boolean fireReverse = false, endThread = false;
+    private boolean endThread = false;
     private int width = Resources.getSystem().getDisplayMetrics().widthPixels, height = Resources.getSystem().getDisplayMetrics().heightPixels;
-    private static final int numberOfCircles = 30;
+    private double fireX = 0.01;
+
+    private float numberOfCircles = 10, sizeOfCircles = 20, speedOfCircles = 0.04f;
+
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -130,35 +133,25 @@ public class DroidWallpaper extends WallpaperService {
         }
 
         private void drowFire(Canvas canvas, Path path1, Paint paint) { //274
+            for (float n = 0; n < numberOfCircles/10; n+=speedOfCircles) {
 
-            for (int n = 0; n < numberOfCircles; n+=10) {
-                if (getX(fireX) > width * 7 / 8){
-                    fireReverse = true;
-                }
-                if (getX(fireX) < width / 8) fireReverse = false;
-                if (!fireReverse) {
-                    path1.addCircle(getX(fireX + n), getY(fireY + n), 30 , Path.Direction.CW);
-                } else {
-                    path1.addCircle(getX(fireX + n), getY(fireY + n), 30 , Path.Direction.CW);
-                }
-
+                path1.addCircle(getX(fireX + n), getY(fireX + n), 5 + (n * sizeOfCircles), Path.Direction.CW);
+                System.out.println("X = " + fireX + " - " + getX(fireX) + " Y = " + fireX + " - " + getY(fireX));
             }
-            if (!fireReverse) {
-                fireX++;
-            } else {
-                fireX--;
-            }
+            fireX += 0.01;
 
-            fireY++;
             canvas.drawPath(path1, paint);
             path1.reset();
         }
 
-        private float getX(int i){
-            return (float) ((i) + width / 8);
+        private float getX(double i) {
+            //double scale = 2 / (3 - Math.cos(2 * i));
+            return (float) ( Math.cos(i) * 270 + width/2);
         }
-        private float getY(int i){
-            return (float) Math.cos((i) * 0.019) * 100 + height / 2;
+
+        private float getY(double i) {
+            //double scale = 2 / (3 - Math.cos(2 * i));
+            return (float) ((Math.sin(2 * i) / 2) * 270 + height/2);
         }
 
         @Override
@@ -211,3 +204,77 @@ public class DroidWallpaper extends WallpaperService {
 
 
 // bitmap doest exchanges!!!!!!!!!!!!!!!!!!!!!!!
+
+/* private void drowFire(Canvas canvas, Path path1, Paint paint) { //274
+            for (int n = 0; n < numberOfCircles; n += 10) {
+                switch (part) {
+                    case 1:
+                        if (getX(fireX) > width / 2){
+                            System.out.println(2 + "");
+                            part = 2;
+                            fireX = 0;
+                            fireY = 0;
+                        }
+                        break;
+                    case 2:
+                        if (getX(fireX) > width * 7 / 8){
+                            System.out.println(3 + "");
+                            part = 3;
+                            fireX = 0;
+                            fireY = 0;
+                        }
+                        break;
+                    case 3:
+                        if (getX(fireX) < width / 2){
+                            System.out.println(4 + "" + "\nX = " + getX(fireX) + " width = " + width/2);
+                            part = 4;
+                            fireX = 0;
+                            fireY = 0;
+                        }
+                        break;
+                    case 4:
+                        if (getX(fireX) < width / 8){
+                            System.out.println(1 + "");
+                            part = 1;
+                            fireX = 0;
+                            fireY = 0;
+                        }
+                        break;
+                }
+
+                path1.addCircle(getX(fireX + n), getY(fireY + n), 30, Path.Direction.CW);
+            }
+            if (part == 1 || part == 2) fireX++; else fireX--;
+            fireY++;
+            canvas.drawPath(path1, paint);
+            path1.reset();
+        }
+
+        private float getX(int i) {
+            float koef = 1.2f;
+            switch (part) {
+                case 1:
+                    return (float) ((i*koef) + width / 8);
+                case 2:
+                    return (float) ((i*koef) + width / 8 + width / 2);
+                case 3:
+                    return (float) ((i*koef) + width * 7 / 8);
+                case 4:
+                    return (float) ((i*koef) + width * 7 / 8);
+            }
+            return (float) ((i) + width / 8);
+        }
+
+        private float getY(int i) {
+            switch (part) {
+                case 1:
+                    return (float) Math.cos((i) * 0.019) * 100 + height / 2;
+                case 2:
+                    return (float) Math.cos((-i) * 0.019) * 100 + height / 2;
+                case 3:
+                    return (float) Math.cos((i) * 0.019) * 100 + height / 2;
+                case 4:
+                    return (float) Math.cos((-i) * 0.019) * 100 + height / 2;
+            }
+            return (float) Math.cos((i) * 0.019) * 100 + height / 2;
+        }*/
