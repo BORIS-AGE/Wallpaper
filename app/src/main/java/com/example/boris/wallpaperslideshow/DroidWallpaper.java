@@ -31,7 +31,7 @@ public class DroidWallpaper extends WallpaperService {
     private long duration = 0;
     private boolean endThread = false, normalMode = true, flyToFinger = false;
     private int width = Resources.getSystem().getDisplayMetrics().widthPixels, height = Resources.getSystem().getDisplayMetrics().heightPixels;
-    private float fireX, fireY, X = 0.01f, fingerX, fingerY;
+    private float fireX, fireY, X = 0.01f, fingerX, fingerY, distanceX, distanceY;
     private List<Float> arrX = new ArrayList<>(), arrY = new ArrayList<>();
 
     private float speedOfCircles = 0.04f;
@@ -174,15 +174,13 @@ public class DroidWallpaper extends WallpaperService {
         }
 
         private float getXfly() {
-            float distanceX = fingerX - fireX;
-            fireX += distanceX/10;
+            fireX += distanceX/50;
             return fireX;
 
         }
 
         private float getYfly() {
-            float distance = fingerY - fireY;
-            fireY += distance/10;
+            fireY += distanceY/50;
             return fireY;
         }
 
@@ -217,6 +215,8 @@ public class DroidWallpaper extends WallpaperService {
 
             fingerX = event.getX();
             fingerY = event.getY();
+            distanceX = fingerX - fireX;
+            distanceY = fingerY - fireY;
 
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 flyToFinger = true;
