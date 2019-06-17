@@ -21,13 +21,14 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 public class DroidWallpaper extends WallpaperService {
-    private int numberOfImages, currentImage, fireX, fireY;
+    private int numberOfImages, currentImage, fireX, fireY, part = 1;
     private File[] files;
     private long lastPressTime = 0, lastTimeAll = 0;
     private Matrix matrix = new Matrix();
     private long duration = 0;
     private boolean fireReverse = false, endThread = false;
     private int width = Resources.getSystem().getDisplayMetrics().widthPixels, height = Resources.getSystem().getDisplayMetrics().heightPixels;
+    private static final int numberOfCircles = 30;
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -128,26 +129,23 @@ public class DroidWallpaper extends WallpaperService {
             }
         }
 
-        private void drowFire(Canvas canvas, Path path1, Paint paint) {
+        private void drowFire(Canvas canvas, Path path1, Paint paint) { //274
 
-
-            for (int n = 0; n < 20; n++) {
+            for (int n = 0; n < numberOfCircles; n+=10) {
+                if (getX(fireX) > width * 7 / 8){
+                    fireReverse = true;
+                }
+                if (getX(fireX) < width / 8) fireReverse = false;
                 if (!fireReverse) {
-                    if (getX(fireX  + n) > width * 7 / 8) fireReverse = true;
-                    path1.addCircle(getX(fireX + n), getY(fireX + n), 30 + n, Path.Direction.CW);
+                    path1.addCircle(getX(fireX + n), getY(fireY + n), 30 , Path.Direction.CW);
                 } else {
-                    if (getX(fireX  + n) < width / 8) fireReverse = false;
-                    path1.addCircle(getX(fireX + n), getY(fireX + n), 50 - n, Path.Direction.CW);
+                    path1.addCircle(getX(fireX + n), getY(fireY + n), 30 , Path.Direction.CW);
                 }
 
-
             }
-
             if (!fireReverse) {
-                if (getX(fireX) > width * 7 / 8) fireReverse = true;
                 fireX++;
             } else {
-                if (getX(fireX) < width / 8) fireReverse = false;
                 fireX--;
             }
 
@@ -157,16 +155,10 @@ public class DroidWallpaper extends WallpaperService {
         }
 
         private float getX(int i){
-            return (float) ((i * 4) + width / 8);
+            return (float) ((i) + width / 8);
         }
         private float getY(int i){
-            float y;
-            if (fireReverse) {
-                y = (float) Math.sin((i) * 0.046) * 100 + height / 2;
-            } else {
-                y = (float) Math.sin((-i) * 0.046) * 100 + height / 2;
-            }
-            return y;
+            return (float) Math.cos((i) * 0.019) * 100 + height / 2;
         }
 
         @Override
