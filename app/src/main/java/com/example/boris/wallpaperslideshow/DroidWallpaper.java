@@ -33,8 +33,8 @@ public class DroidWallpaper extends WallpaperService {
     private float fireX, fireY, X = 0.01f, fingerX, fingerY, distanceX, distanceY, lastX, lastY;
     private List<Float> arrX = new ArrayList<>(), arrY = new ArrayList<>();
 
-    private float speedOfCircles = 0.04f;
-    private int numberOfCircles = 100, sizeOfCircles = 20;
+    private float speedOfCircles = 0.02f;
+    private int numberOfCircles = 60, sizeOfCircles = 30;
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -136,14 +136,20 @@ public class DroidWallpaper extends WallpaperService {
 
         private void drowFire(Canvas canvas, Path path1, Paint paint) {
             if (normalMode){
-                //clear lists
-                arrY.clear();
-                arrX.clear();
-                int i = 0;
-                for (float n = 0; n < numberOfCircles / 100; n += 0.01) {
-                    path1.addCircle(getX(X + n), getY(X + n), 5 + (n * sizeOfCircles), Path.Direction.CW);
-                    arrX.add(i, getX(X + n)); //record last value X
-                    arrY.add(i++, getY(X + n)); //record last value Y
+                arrX.add(getX(X));
+                arrY.add(getY(X));
+                if(arrX.size() > numberOfCircles){
+                    float i = 0;
+                    for (int n = arrX.size() - numberOfCircles - 1; n < arrX.size() ; n++) {
+                        path1.addCircle(arrX.get(n), arrY.get(n), 5 + (i++ / 100 * sizeOfCircles), Path.Direction.CW);
+                    }
+                }else{
+                    int i = 0;
+                    for (float n = 0; n < numberOfCircles / 100; n += 0.01) {
+                        path1.addCircle(getX(X + n), getY(X + n), 5 + (n * sizeOfCircles), Path.Direction.CW);
+                        arrX.add(i, getX(X + n)); //record last value X
+                        arrY.add(i++, getY(X + n)); //record last value Y
+                    }
                 }
                 X += speedOfCircles;
             }
@@ -188,7 +194,7 @@ public class DroidWallpaper extends WallpaperService {
                     fireX += distanceX / 50;
             }
             if (flyBack) {
-                if ((lastX - fireX > 0 && lastX - fireX > 10) || (lastX - fireX < 0 && lastX - fireX < 10))
+                if ((lastX - fireX > 0 && lastX - fireX > 5) || (lastX - fireX < 0 && lastX - fireX < 5))
                     fireX += distanceX / 50;
                 else if (firstReady) {
                     flyBack = false;
@@ -207,7 +213,7 @@ public class DroidWallpaper extends WallpaperService {
                     fireY += distanceY / 50;
             }
             if (flyBack) {
-                if ((lastY - fireY > 0 && lastY - fireY > 10) || (lastY - fireY < 0 && lastY - fireY < 10))
+                if ((lastY - fireY > 0 && lastY - fireY > 5) || (lastY - fireY < 0 && lastY - fireY < 5))
                     fireY += distanceY / 50;
                 else if (firstReady) {
                     flyBack = false;
@@ -228,6 +234,11 @@ public class DroidWallpaper extends WallpaperService {
                 if (lastTimeAll + TimeUnit.SECONDS.toMillis(duration) < System.currentTimeMillis())
                     handler.post(drawImage);
             } else {
+                normalMode = true;
+                flyBack = false;
+                flyToFinger = false;
+                arrX.clear();
+                arrY.clear();
                 handler.removeCallbacks(drawImage);
             }
         }
@@ -235,6 +246,8 @@ public class DroidWallpaper extends WallpaperService {
         @Override
         public void onDestroy() {
             super.onDestroy();
+            arrX.clear();
+            arrY.clear();
             handler.removeCallbacks(drawImage);
         }
 
