@@ -11,10 +11,10 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class SettingsActivity extends AppCompatActivity implements SeekBar.OnSeekBarChangeListener {
+public class SettingsActivity extends AppCompatActivity {
 
-    private SeekBar seekBar;
-    private TextView seekTime;
+    private SeekBar timeSeekbar, sizeSeekbar;
+    private TextView seekTime, sizeText;
     private SharedPreferences.Editor editor;
 
     @SuppressLint("CommitPrefEdits")
@@ -23,39 +23,68 @@ public class SettingsActivity extends AppCompatActivity implements SeekBar.OnSee
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        seekBar = findViewById(R.id.seekBar);
+        timeSeekbar = findViewById(R.id.seekBar);
+        sizeSeekbar = findViewById(R.id.sizeSickbar);
+
         seekTime = findViewById(R.id.settingsSlideTime);
-        seekBar.setOnSeekBarChangeListener(this);
+        sizeText = findViewById(R.id.sizeTextSettings);
+
+        timeSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                double time = formatProgressTime(progress);
+                if (time <= 60)
+                    seekTime.setText(((int)time) + "sec");
+                else
+                    seekTime.setText((time/60) + "min");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                if (seekBar.getProgress() == 0){
+                    makeErrorNotification("slide time can't be 0");
+                    return;
+                }
+                editor.putLong("SlideTime", formatProgressTime(seekBar.getProgress()));
+                editor.commit();
+            }
+        });
+        sizeSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                sizeText.setText(progress + "px");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                editor.putInt("SnakeSize", seekBar.getProgress());
+                editor.commit();
+            }
+        });
 
         long defaultSeek = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
-        seekBar.setProgress(defaultSeek <= 60? (int)defaultSeek/5 : (int)(defaultSeek/30) + 10);
+        timeSeekbar.setProgress(defaultSeek <= 60? (int)defaultSeek/5 : (int)(defaultSeek/30) + 10);
+        double time = formatProgressTime(timeSeekbar.getProgress());
+        if (time <= 60)
+            seekTime.setText(((int)time) + "sec");
+        else
+            seekTime.setText((time/60) + "min");
+
+        int defaultSize = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getInt("SnakeSize", 30);
+        sizeSeekbar.setProgress(defaultSize);
+        sizeText.setText(defaultSize + "px");
 
         editor = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).edit();
-    }
-
-
-    @Override
-    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-            double time = formatProgressTime(progress);
-            if (time <= 60)
-                seekTime.setText(((int)time) + "sec");
-            else
-                seekTime.setText((time/60) + "min");
-    }
-
-    @Override
-    public void onStartTrackingTouch(SeekBar seekBar) {
-
-    }
-
-    @Override
-    public void onStopTrackingTouch(SeekBar seekBar) {
-        if (seekBar.getProgress() == 0){
-            makeErrorNotification("slide time can't be 0");
-            return;
-        }
-        editor.putLong("SlideTime", formatProgressTime(seekBar.getProgress()));
-        editor.commit();
     }
 
     private int formatProgressTime(int progress){
@@ -72,3 +101,12 @@ public class SettingsActivity extends AppCompatActivity implements SeekBar.OnSee
     }
 
 }
+
+
+
+
+
+
+
+
+

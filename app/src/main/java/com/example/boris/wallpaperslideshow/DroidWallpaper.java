@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class DroidWallpaper extends WallpaperService {
     private int numberOfImages, currentImage;
@@ -98,25 +100,25 @@ public class DroidWallpaper extends WallpaperService {
                 snake.setPaint(paint);
                 Path path1 = new Path();
                 new Thread(() -> {
+                    Lock lock = new ReentrantLock();
                     while (lastTimeAll + frameDuration - 100 > System.currentTimeMillis() && !endThread) {
-                        if (!holder.isCreating()) {
+                        if (!holder.isCreating() && lock.tryLock()) {
+                            lock.lock();
                             Canvas canvas = holder.lockCanvas();
                             canvas.drawBitmap(finalBitmap, matrix, null); // draw main picture
 
                             //draw fire
                             snake.drowFire(canvas, path1, paint);
                             holder.unlockCanvasAndPost(canvas);
+                            lock.unlock();
                         }
                     }
                     endThread = false;
                 }).start();
 
                 lastTimeAll = System.currentTimeMillis();
-                //get next slide duration
-                duration = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
-                if (duration != 0) {
-                    frameDuration = TimeUnit.SECONDS.toMillis(duration);
-                }
+
+                setSettings();
 
                 handler.removeCallbacks(drawImage); // remove other handlers
                 handler.postDelayed(drawImage, frameDuration);// run next slide
@@ -174,6 +176,16 @@ public class DroidWallpaper extends WallpaperService {
             }
             snake.setDistances();
 
+        }
+
+        private void setSettings(){
+            //get next slide duration
+            duration = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
+            if (duration != 0) {
+                frameDuration = TimeUnit.SECONDS.toMillis(duration);
+            }
+            //set size of circles
+            snake.setSizeOfCircles(getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getInt("SnakeSize", 30));
         }
     }
 

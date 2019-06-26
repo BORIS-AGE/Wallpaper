@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
     private void getImages() {
         File path = Environment.getExternalStorageDirectory();
         File dir = new File(path + "/WallpaperSlideshow/");
-//            dir.mkdirs();
+        dir.mkdirs(); // if folder not exists create empty
         File[] files = dir.listFiles();
         int numberOfImages = files.length;
         if (numberOfImages == 0) {

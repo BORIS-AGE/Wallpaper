@@ -33,9 +33,6 @@ public class InfinitySnake {
         if (normalMode){
             arrX.add(getX(X));
             arrY.add(getY(X));
-            paint.setShader(new RadialGradient(fireX, fireY,
-                    sizeOfCircles,  ContextCompat.getColor(context,R.color.red), ContextCompat.getColor(context,R.color.orange), Shader.TileMode.MIRROR));
-
             if(arrX.size() > numberOfCircles){
                 float i = 0;
                 for (int n = arrX.size() - numberOfCircles - 1; n < arrX.size() ; n++) {
@@ -43,7 +40,7 @@ public class InfinitySnake {
                 }
             }else{
                 int i = 0;
-                for (float n = 0; n < numberOfCircles / 100; n += 0.01) {
+                for (float n = 0; n < numberOfCircles / 100; n += 0.02f) {
                     path1.addCircle(getX(X + n), getY(X + n), 5 + (n * sizeOfCircles), Path.Direction.CW);
                     arrX.add(i, getX(X + n)); //record last value X
                     arrY.add(i++, getY(X + n)); //record last value Y
@@ -67,17 +64,19 @@ public class InfinitySnake {
                 path1.addCircle(arrX.get(n), arrY.get(n), 5 + (i++ / 100 * sizeOfCircles), Path.Direction.CW);
             }
         }
-
         canvas.drawPath(path1, paint);
         path1.reset();
     }
 
     public void setPaint(Paint paint){
-        Float positions = null; //floatArrayOf(0f, 0.3f, 0.6f)
-
         // Gradient Shade colors
         paint.setStrokeWidth(8);
-
+        paint.setShader(new RadialGradient(
+                width/2, height/2,
+                250,
+                ContextCompat.getColor(context,R.color.red),
+                ContextCompat.getColor(context,R.color.orange),
+                Shader.TileMode.MIRROR));
         paint.setStyle(Paint.Style.FILL_AND_STROKE);
     }
 
@@ -159,5 +158,9 @@ public class InfinitySnake {
             distanceX = lastX - fireX;
             distanceY = lastY - fireY;
         }
+    }
+
+    public void setSizeOfCircles(int sizeOfCircles) {
+        this.sizeOfCircles = sizeOfCircles;
     }
 }
