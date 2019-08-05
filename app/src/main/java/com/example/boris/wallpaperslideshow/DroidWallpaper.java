@@ -27,10 +27,11 @@ import java.util.concurrent.locks.ReentrantLock;
 public class DroidWallpaper extends WallpaperService {
     private int numberOfImages, currentImage;
     private File[] files;
-    private long lastPressTime = 0, lastTimeAll = 0;
+    private long lastPressTime = 0, lastTimeAll = 0, frameDuration = TimeUnit.SECONDS.toMillis(5);
     private Matrix matrix = new Matrix();
-    private long duration = 0;
     private InfinitySnake snake;
+    private boolean doubleClickEvent = false;
+    private Thread drawingThread;
 
     @Override
     public WallpaperService.Engine onCreateEngine() {
@@ -50,6 +51,10 @@ public class DroidWallpaper extends WallpaperService {
             return BitmapFactory.decodeResource(getResources(), R.drawable.pic11);
         }
 
+        if (lastTimeAll + TimeUnit.SECONDS.toMillis(frameDuration) > System.currentTimeMillis() && !doubleClickEvent)
+            currentImage--;
+        doubleClickEvent = false;
+
         if (currentImage >= numberOfImages)
             currentImage = 0;
         FileInputStream streamIn = new FileInputStream(files[currentImage++]);
@@ -62,11 +67,11 @@ public class DroidWallpaper extends WallpaperService {
     }
 
     private class DroidWallpaperEngine extends WallpaperService.Engine {
-
-        private long frameDuration = TimeUnit.SECONDS.toMillis(5);
         private SurfaceHolder holder;
         private boolean visible, endThread = false;
         private Handler handler;
+        private Lock lock = new ReentrantLock();
+
 
         public DroidWallpaperEngine() {
             handler = new Handler();
@@ -100,19 +105,20 @@ public class DroidWallpaper extends WallpaperService {
                 snake.setPaint(paint);
                 Path path1 = new Path();
                 new Thread(() -> {
-                    Lock lock = new ReentrantLock();
+                    if (!lock.tryLock())
+                        lock.lock();
                     while (lastTimeAll + frameDuration - 100 > System.currentTimeMillis() && !endThread) {
-                        if (!holder.isCreating() && lock.tryLock()) {
-                            lock.lock();
+                        if (!holder.isCreating()) {
                             Canvas canvas = holder.lockCanvas();
                             canvas.drawBitmap(finalBitmap, matrix, null); // draw main picture
 
                             //draw fire
                             snake.drowFire(canvas, path1, paint);
+
                             holder.unlockCanvasAndPost(canvas);
-                            lock.unlock();
                         }
                     }
+                    lock.unlock();
                     endThread = false;
                 }).start();
 
@@ -130,8 +136,7 @@ public class DroidWallpaper extends WallpaperService {
         public void onVisibilityChanged(boolean visible) {
             this.visible = visible;
             if (visible) {
-                if (lastTimeAll + TimeUnit.SECONDS.toMillis(duration) < System.currentTimeMillis())
-                    handler.post(drawImage);
+                handler.post(drawImage);
             } else {
                 snake.setMode(true, false, false);
                 snake.clearArrays();
@@ -161,31 +166,34 @@ public class DroidWallpaper extends WallpaperService {
             snake.setFingers(event.getX(), event.getY());
 
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                snake.setMode(false,true,false);
+                snake.setMode(false, true, false);
                 //double click event
                 if (System.currentTimeMillis() - lastPressTime < 500) {
                     lastPressTime = 0;
                     endThread = true;
+                    doubleClickEvent = true;
                     draw();
                 } else {
                     lastPressTime = System.currentTimeMillis();
                 }
             }
             if (event.getAction() == MotionEvent.ACTION_UP) {
-                snake.setMode(false,false,true);
+                snake.setMode(false, false, true);
             }
             snake.setDistances();
 
         }
 
-        private void setSettings(){
+        private void setSettings() {
             //get next slide duration
-            duration = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
+            long duration = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
             if (duration != 0) {
                 frameDuration = TimeUnit.SECONDS.toMillis(duration);
             }
             //set size of circles
             snake.setSizeOfCircles(getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getInt("SnakeSize", 30));
+            //length of circles
+            snake.setNumberOfCircles(getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getInt("SnakeLength", 60));
         }
     }
 

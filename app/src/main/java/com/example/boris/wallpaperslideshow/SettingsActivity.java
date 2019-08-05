@@ -13,8 +13,8 @@ import android.widget.Toast;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    private SeekBar timeSeekbar, sizeSeekbar;
-    private TextView seekTime, sizeText;
+    private SeekBar timeSeekbar, sizeSeekbar, lengthSeekbar;
+    private TextView seekTime, sizeText, lengthText;
     private SharedPreferences.Editor editor;
 
     @SuppressLint("CommitPrefEdits")
@@ -25,9 +25,11 @@ public class SettingsActivity extends AppCompatActivity {
 
         timeSeekbar = findViewById(R.id.seekBar);
         sizeSeekbar = findViewById(R.id.sizeSickbar);
+        lengthSeekbar = findViewById(R.id.lengthSickbar);
 
         seekTime = findViewById(R.id.settingsSlideTime);
         sizeText = findViewById(R.id.sizeTextSettings);
+        lengthText = findViewById(R.id.lengthTextSettings);
 
         timeSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -71,6 +73,23 @@ public class SettingsActivity extends AppCompatActivity {
                 editor.commit();
             }
         });
+        lengthSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                lengthText.setText((progress * 5) + "px");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                editor.putInt("SnakeLength", seekBar.getProgress() * 5);
+                editor.commit();
+            }
+        });
 
         long defaultSeek = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getLong("SlideTime", 0);
         timeSeekbar.setProgress(defaultSeek <= 60? (int)defaultSeek/5 : (int)(defaultSeek/30) + 10);
@@ -83,6 +102,10 @@ public class SettingsActivity extends AppCompatActivity {
         int defaultSize = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getInt("SnakeSize", 30);
         sizeSeekbar.setProgress(defaultSize);
         sizeText.setText(defaultSize + "px");
+
+        int defaultLength = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).getInt("SnakeLength", 60);
+        lengthSeekbar.setProgress(defaultLength / 5);
+        lengthText.setText(defaultLength + "px");
 
         editor = getSharedPreferences(MainActivity.PREFETNCE_KEY, MODE_PRIVATE).edit();
     }

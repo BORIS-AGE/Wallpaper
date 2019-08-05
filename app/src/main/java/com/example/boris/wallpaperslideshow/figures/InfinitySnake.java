@@ -52,6 +52,7 @@ public class InfinitySnake {
             arrX.add(getXfly());
             arrY.add(getYfly());
             float i = 0;
+            if (arrX.size() > numberOfCircles)
             for (int n = arrX.size() - numberOfCircles - 1; n < arrX.size(); n++) {
                 path1.addCircle(arrX.get(n), arrY.get(n), 5 + (i++ / 100 * sizeOfCircles), Path.Direction.CW);
             }
@@ -60,7 +61,8 @@ public class InfinitySnake {
             arrX.add(getXfly());
             arrY.add(getYfly());
             float i = 0;
-            for (int n = arrX.size() - numberOfCircles - 1; n < arrX.size(); n++) {
+            if (arrX.size() > numberOfCircles)
+                for (int n = arrX.size() - numberOfCircles - 1; n < arrX.size(); n++) {
                 path1.addCircle(arrX.get(n), arrY.get(n), 5 + (i++ / 100 * sizeOfCircles), Path.Direction.CW);
             }
         }
@@ -162,5 +164,9 @@ public class InfinitySnake {
 
     public void setSizeOfCircles(int sizeOfCircles) {
         this.sizeOfCircles = sizeOfCircles;
+    }
+
+    public void setNumberOfCircles(int numberOfCircles) {
+        this.numberOfCircles = numberOfCircles;
     }
 }

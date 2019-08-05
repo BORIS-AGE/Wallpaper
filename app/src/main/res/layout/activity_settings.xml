@@ -10,6 +10,11 @@
 
     <include layout="@layout/toolbar"/>
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Update time" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -33,7 +38,10 @@
             android:gravity="center"/>
 
     </LinearLayout>
-
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Size" />
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -48,6 +56,33 @@
             />
         <TextView
             android:id="@+id/sizeTextSettings"
+            android:layout_width="60dp"
+            android:layout_height="match_parent"
+            android:text="30px"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textAlignment="center"
+            android:gravity="center"/>
+
+    </LinearLayout>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Length" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <SeekBar
+            android:id="@+id/lengthSickbar"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:min="1"
+            android:max="40"
+            />
+        <TextView
+            android:id="@+id/lengthTextSettings"
             android:layout_width="60dp"
             android:layout_height="match_parent"
             android:text="30px"
